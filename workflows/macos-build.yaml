@@ -1,0 +1,39 @@
+name: macos build
+run-name: build runner on macos 🚀
+
+# 触发CI条件
+on:
+  # PR
+  pull_request:
+    branches:
+    # 当下面分支PR时, 触发CI
+      - main
+  # push
+  push:
+    # 当下面文件发生变化时, 触发CI
+    paths:
+      - 'cmake/**'
+      - 'include/**/*.h'
+      - 'src/**/*.cc'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - 'scripts/**'
+      - 'setup.py'
+      - '.github/workflows/macos-build.yaml'
+
+jobs:
+  build-amd-macos:
+    strategy:
+      matrix:
+        os: ["macos-latest"]
+    runs-on: ${{ matrix.os }}
+    # github 提供的macOS镜像里包含基本的开发工具, 包括brew python3
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Build
+        run: |
+          bash -c "cd ${{ github.workspace }} && python3 setup.py && source install/setup.bash && ./scripts/build.sh"
+      - name: Test
+        run: |
+          bash -c "cd ${{ github.workspace }} && source install/setup.bash && ./scripts/run_tests.sh"

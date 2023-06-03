@@ -1,0 +1,51 @@
+name: ubuntu build
+run-name: build runner on ubuntu 🚀
+
+# 触发CI条件
+on:
+  # PR
+  pull_request:
+    # 当下面分支PR时, 触发CI
+    branches:
+      - main
+  # push
+  push:
+    # 当下面文件发生变化时, 触发CI
+    paths:
+      - 'include/**/*.h'
+      - 'src/**/*.cc'
+      - 'CMakeLists.txt'
+      - '.github/workflows/ubuntu-build.yaml'
+
+jobs:
+  build-amd-ubuntu:
+    # 并行
+    strategy:
+      matrix:
+        os: ["16.04", "18.04", "20.04", "22.04"]
+    # github actions docker image
+    runs-on: ubuntu-latest
+    # docker in docker 因为Github提供的镜像不满足需求, 所以需要拉取dockerhub上的镜像
+    container:
+      # dockerhub镜像
+      image: docker://ubuntu:${{ matrix.os }}
+      # 挂载
+      options: --volume ${{ github.workspace }}:/workspace/${{ github.repository }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      # 安装依赖
+      - name: Install
+        # 非交互式
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt update
+          apt install -y python3-dev git pkg-config g++ cmake libtinyxml2-dev
+      # 编译
+      - name: Build
+        run: |
+          bash -c "cd /workspace/${{ github.repository }} && python3 setup.py && source install/setup.bash && ./scripts/build.sh"
+      - name: Test
+        run: |
+          bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash && ./scripts/run_tests.sh"
