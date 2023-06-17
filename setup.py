@@ -1,22 +1,19 @@
 import sys
+import json
 import os
-
-DEPENDENCES = {
-    # "": [link, branch, cmake options]
-    "setup": ["https://github.com/minhanghuang/setup.git", "", ""],
-    "googletest": ["https://github.com/google/googletest.git", "", "-DCMAKE_CXX_STANDARD=14"],
-    "tinyxml2": ["https://github.com/leethomason/tinyxml2.git", "", ""],
-}
+from collections import OrderedDict
 
 
 class Repository:
     def __init__(self) -> None:
-        self.__link = ""
+        self.__addr = ""
         self.__name = ""
         self.__branch = ""
+        self.__before_script = ""
+        self.__options = ""
 
-    def get_link(self):
-        return self.__link
+    def get_addr(self):
+        return self.__addr
 
     def get_name(self):
         return self.__name
@@ -24,8 +21,14 @@ class Repository:
     def get_branch(self):
         return self.__branch
 
-    def set_link(self, link):
-        self.__link = link
+    def get_before_script(self):
+        return self.__before_script
+
+    def get_options(self):
+        return self.__options
+
+    def set_addr(self, addr):
+        self.__addr = addr
 
     def set_name(self, name):
         self.__name = name
@@ -33,76 +36,110 @@ class Repository:
     def set_branch(self, branch):
         self.__branch = branch
 
+    def set_before_script(self, before_script):
+        self.__before_script = before_script
+
+    def set_options(self, options: list[str]):
+        self.__options = ""
+        for option in options:
+            self.__options += " " + option
+
 
 class Pipeline:
     def __init__(self) -> None:
-        self.__repos = []
+        self.__repos = OrderedDict()
         self.__current_path = os.path.abspath(__file__)
         self.__download_path = os.path.join(
             os.path.dirname(self.__current_path), "third_party")
         self.__install_path = os.path.join(
             os.path.dirname(self.__current_path), "install")
+        self.__packages_path = os.path.join(
+            os.path.dirname(self.__current_path), "packages.json")
+
+    def check(self):
+        if not os.path.exists(self.__packages_path):
+            print("packages.json文件不存在: {}".format(self.__packages_path))
+            exit(9)
 
     def init(self):
-        print("current path: {}".format(self.__current_path))
-        print("download path: {}".format(self.__download_path))
-        print("install path: {}".format(self.__install_path))
         os.system("mkdir -p {}".format(self.__download_path))
         os.system("mkdir -p {}".format(self.__install_path))
-
-    def append_repository(self, link: str, branch: str = ""):
-        repo = Repository()
-        repo.set_link(link=link)
-        repo.set_name(name=link.rsplit(".", 1)[0].rsplit("/", 1)[-1])
-        repo.set_branch(branch=branch)
-        self.__repos.append(repo)
+        self.__loading()
 
     def download(self):
+        print("#######################")
         print("########### Download...")
-        for repo in self.__repos:
+        print("#######################")
+        for _, repo in self.__repos.items():
             self.__clone(repo=repo)
 
     def build(self):
-        print("########### Build...")
-        for name in os.listdir(self.__download_path):
-            print("name: ", name)
+        print("#######################")
+        print("############## Build...")
+        print("#######################")
+        for name, repo in self.__repos.items():
             os.chdir(os.path.join(self.__download_path, name))
-            cmd = "mkdir -p build && cd build && cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX={} {}".format(
-                self.__install_path, DEPENDENCES[name][2])
-            print("cmake: {}".format(cmd))
-            os.system(cmd)
+            cmd = "export LD_LIBRARY_PATH={0}/lib:$LD_LIBRARY_PATH && mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX={0} {1}".format(
+                self.__install_path, repo.get_options())
+            self.__cmd(cmd=cmd)
             os.chdir("build")
             cmd = "make install -j4"
-            print("make: {}".format(cmd))
-            os.system(cmd)
+            self.__cmd(cmd=cmd)
 
     def __clone(self, repo: Repository):
         cmd = ""
         download_path = os.path.join(self.__download_path, repo.get_name())
         if os.path.exists(download_path):
             return
-            # os.system("rm -rf {}".format(download_path))
-        os.system("mkdir -p {}".format(download_path))
+        self.__cmd("mkdir -p {}".format(download_path))
         if "" == repo.get_branch():
             cmd = "git clone --depth 1 {} {}".format(
-                repo.get_link(),
+                repo.get_addr(),
                 download_path)
         else:
             cmd = "git clone --depth 1 --single-branch --branch {} {} {}".format(
                 repo.get_branch(),
-                repo.get_link(),
+                repo.get_addr(),
                 download_path)
+        self.__cmd(cmd=cmd)
 
-        print("clone: {}".format(cmd))
+    def __cmd(self, cmd):
+        print("cmd: {}".format(cmd))
         os.system(cmd)
+
+    def __append_repository(self, **kwargs):
+        repo = Repository()
+        for key, value in kwargs.items():
+            if "addr" == key:
+                repo.set_addr(addr=value)
+                repo.set_name(name=value.rsplit(".", 1)[0].rsplit("/", 1)[-1])
+            elif "branch" == key:
+                repo.set_branch(branch=value)
+            elif "before_script" == key:
+                repo.set_before_script(before_script=value)
+            elif "options" == key:
+                repo.set_options(options=value)
+            else:
+                print("Exception")
+                exit(0)
+        self.__repos[repo.get_name()] = repo
+
+    def __loading(self):
+        with open(self.__packages_path) as file:
+            data = json.load(file, object_pairs_hook=OrderedDict)
+        for name, repo in data["dependencies"].items():
+            self.__append_repository(
+                addr=repo.get("addr"),
+                branch=repo.get("commit", ""),
+                before_script=repo.get("before_script", ""),
+                options=repo.get("cmake_optione", "")
+            )
 
 
 def main():
     pipe_line = Pipeline()
+    pipe_line.check()
     pipe_line.init()
-    for _, repo in DEPENDENCES.items():
-        print("parse: {} {}".format(repo[0], repo[1]))
-        pipe_line.append_repository(link=repo[0], branch=repo[1])
     pipe_line.download()
     pipe_line.build()
 
