@@ -1,4 +1,12 @@
 {
+  "scripts": {
+    "before": [
+      "ls {install_path}"
+    ],
+    "after": [
+      "ls -a"
+    ]
+  },
   "dependencies": {
     "setup": {
       "addr": "https://github.com/minhanghuang/setup.git",

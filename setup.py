@@ -5,6 +5,26 @@ import os
 from collections import OrderedDict
 
 
+class Template:
+    def __init__(self) -> None:
+        self._current_path = os.path.abspath(os.path.dirname(__file__))
+        self._download_path = ""
+        self._install_path = ""
+
+    def set_download_path(self, path):
+        self._download_path = path
+
+    def set_install_path(self, path):
+        self._install_path = path
+
+    def get_template(self):
+        return {
+            "current_path": self._current_path,
+            "download_path": self._download_path,
+            "install_path": self._install_path
+        }
+
+
 class Parser:
     def __init__(self) -> None:
         self._parser = argparse.ArgumentParser()
@@ -42,6 +62,24 @@ class Parser:
 
     def get_build_folder(self):
         return self._build_folder
+
+
+class Script:
+    def __init__(self) -> None:
+        self._before = []
+        self._after = []
+
+    def set_before(self, script: list):
+        self._before = script
+
+    def set_after(self, script: list):
+        self._after = script
+
+    def get_before(self):
+        return self._before
+
+    def get_after(self):
+        return self._after
 
 
 class Repository:
@@ -89,6 +127,8 @@ class Pipeline:
     def __init__(self) -> None:
         self._parser = Parser()
         self._repos = OrderedDict()
+        self._scripts = Script()
+        self._template = Template()
         self._current_path = os.path.abspath(__file__)
         self._download_path = ""
         self._install_path = ""
@@ -96,12 +136,8 @@ class Pipeline:
 
     def init(self):
         self._load_params()
-        self._loading_dependency()
-
-    def check(self):
-        if not os.path.exists(self._packages_path):
-            print("packages.json文件不存在: {}".format(self._packages_path))
-            exit(9)
+        self._loading_packages()
+        self._before_script()
 
     def download(self):
         for _, repo in self._repos.items():
@@ -116,6 +152,9 @@ class Pipeline:
             os.chdir("build")
             cmd = "make install -j4"
             self._command(cmd=cmd)
+
+    def exit(self):
+        self._after_script()
 
     def _clone(self, repo: Repository):
         cmd = ""
@@ -135,8 +174,9 @@ class Pipeline:
         self._command(cmd=cmd)
 
     def _command(self, cmd):
-        print("cmd: {}".format(cmd))
-        os.system(cmd)
+        if "" != cmd:
+            print("cmd: {}".format(cmd))
+            os.system(cmd)
 
     def _load_params(self):
         self._parser.start()
@@ -146,10 +186,15 @@ class Pipeline:
             os.path.dirname(self._current_path), str(self._parser.get_build_folder()))
         self._packages_path = os.path.join(
             os.path.dirname(self._current_path), "packages.json")
+        if not os.path.exists(self._packages_path):
+            print("packages.json文件不存在: {}".format(self._packages_path))
+            exit(9)
         self._command("mkdir -p {}".format(self._download_path))
         self._command("mkdir -p {}".format(self._install_path))
+        self._template.set_download_path(self._download_path)
+        self._template.set_install_path(self._install_path)
 
-    def _loading_dependency(self):
+    def _loading_packages(self):
         with open(self._packages_path) as file:
             data = json.load(file, object_pairs_hook=OrderedDict)
         for name, repo in data["dependencies"].items():
@@ -159,6 +204,16 @@ class Pipeline:
                 before_script=repo.get("before_script", ""),
                 options=repo.get("cmake_optione", "")
             )
+        self._scripts.set_before(data["scripts"].get("before", []))
+        self._scripts.set_after(data["scripts"].get("after", []))
+
+    def _before_script(self):
+        for script in self._scripts.get_before():
+            self._command(script.format(**self._template.get_template()))
+
+    def _after_script(self):
+        for script in self._scripts.get_after():
+            self._command(script)
 
     def _append_repository(self, **kwargs):
         repo = Repository()
@@ -181,9 +236,9 @@ class Pipeline:
 def main():
     pipe_line = Pipeline()
     pipe_line.init()
-    pipe_line.check()
-    pipe_line.download()
-    pipe_line.build()
+    # pipe_line.download()
+    # pipe_line.build()
+    pipe_line.exit()
 
 
 if __name__ == "__main__":
