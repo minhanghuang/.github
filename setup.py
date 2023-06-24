@@ -89,6 +89,7 @@ class Repository:
         self._branch = ""
         self._before_script = ""
         self._options = ""
+        self._install_path = ""
 
     def get_addr(self):
         return self._addr
@@ -117,10 +118,8 @@ class Repository:
     def set_before_script(self, before_script):
         self._before_script = before_script
 
-    def set_options(self, options: list[str]):
-        self._options = ""
-        for option in options:
-            self._options += " " + option
+    def set_options(self, options):
+        self._options = options
 
 
 class Pipeline:
@@ -133,6 +132,7 @@ class Pipeline:
         self._download_path = ""
         self._install_path = ""
         self._packages_path = ""
+        self._pkg_config_path = ""
 
     def init(self):
         self._load_params()
@@ -146,8 +146,8 @@ class Pipeline:
     def build(self):
         for name, repo in self._repos.items():
             os.chdir(os.path.join(self._download_path, name))
-            cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{2} && mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX={0} {1}".format(
-                self._install_path, repo.get_options(), os.getenv('PKG_CONFIG_PATH'))
+            cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{0}/shared/pkgconfig:{1} && mkdir -p build && cd build && cmake .. {2}".format(
+                self._install_path, self._pkg_config_path, repo.get_options())
             self._command(cmd=cmd)
             os.chdir("build")
             cmd = "make install -j4"
@@ -188,11 +188,16 @@ class Pipeline:
             os.path.dirname(self._current_path), "packages.json")
         if not os.path.exists(self._packages_path):
             print("packages.json文件不存在: {}".format(self._packages_path))
-            exit(9)
+            sys.exit(9)
         self._command("mkdir -p {}".format(self._download_path))
         self._command("mkdir -p {}".format(self._install_path))
         self._template.set_download_path(self._download_path)
         self._template.set_install_path(self._install_path)
+
+        if os.getenv("PKG_CONFIG_PATH"):
+            self._pkg_config_path = "{}".format(os.getenv("PKG_CONFIG_PATH"))
+        else:
+            self._pkg_config_path = ""
 
     def _loading_packages(self):
         with open(self._packages_path) as file:
@@ -226,7 +231,11 @@ class Pipeline:
             elif "before_script" == key:
                 repo.set_before_script(before_script=value)
             elif "options" == key:
-                repo.set_options(options=value)
+                options = ""
+                for option in value:
+                    options += " " + \
+                        option.format(**self._template.get_template())
+                repo.set_options(options=options)
             else:
                 print("Exception")
                 exit(0)
