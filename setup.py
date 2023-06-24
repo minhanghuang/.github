@@ -146,8 +146,8 @@ class Pipeline:
     def build(self):
         for name, repo in self._repos.items():
             os.chdir(os.path.join(self._download_path, name))
-            cmd = "export LD_LIBRARY_PATH={0}/lib:$LD_LIBRARY_PATH && mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX={0} {1}".format(
-                self._install_path, repo.get_options())
+            cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{2} && mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX={0} {1}".format(
+                self._install_path, repo.get_options(), os.getenv('PKG_CONFIG_PATH'))
             self._command(cmd=cmd)
             os.chdir("build")
             cmd = "make install -j4"
@@ -236,8 +236,8 @@ class Pipeline:
 def main():
     pipe_line = Pipeline()
     pipe_line.init()
-    # pipe_line.download()
-    # pipe_line.build()
+    pipe_line.download()
+    pipe_line.build()
     pipe_line.exit()
 
 

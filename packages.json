@@ -16,16 +16,12 @@
     },
     "googletest": {
       "addr": "https://github.com/google/googletest.git",
-      "commit": "",
-      "before_script": "",
       "cmake_optione": [
         "-DCMAKE_CXX_STANDARD=14"
       ]
     },
     "tinyxml2": {
       "addr": "https://github.com/leethomason/tinyxml2.git",
-      "commit": "",
-      "before_script": "",
       "cmake_optione": [
         "-DBUILD_SHARED_LIBS=ON"
       ]
