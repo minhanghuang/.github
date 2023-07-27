@@ -52,3 +52,22 @@ jobs:
       - name: Test
         run: |
           bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash"
+
+  build-arm-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: aarch64
+          distro: ubuntu18.04
+          install: |
+            apt update
+            apt install -y git python3-dev pkg-config g++ cmake
+            git clone --depth 1 https://github.com/minhanghuang/cactus.git /root/cactus
+
+          run: |
+            bash -c "cd /root/cactus && python3 setup.py && source install/setup.bash && ./scripts/build.sh"
+
