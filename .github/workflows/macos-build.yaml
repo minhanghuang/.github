@@ -3,12 +3,6 @@ run-name: build runner on macos 🚀
 
 # 触发CI条件
 on:
-  # PR
-  pull_request:
-    branches:
-    # 当下面分支PR时, 触发CI
-      - main
-  # push
   push:
     # 当下面文件发生变化时, 触发CI
     paths:
@@ -21,12 +15,18 @@ on:
       - 'setup.py'
       - '.github/workflows/macos-build.yaml'
 
+  pull_request:
+    branches:
+    # 当下面分支PR时, 触发CI
+      - main
+  
 jobs:
   build-amd-macos:
     strategy:
       matrix:
         os: ["macos-latest"]
     runs-on: ${{ matrix.os }}
+
     # github 提供的macOS镜像里包含基本的开发工具, 包括brew python3
     steps:
 
