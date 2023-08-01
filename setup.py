@@ -123,6 +123,11 @@ class Repository:
     def set_options(self, options):
         self._options = options
 
+    def is_git_repository(self) -> bool:
+        if ".git" in self._addr:
+            return True
+        return False
+
 
 class Pipeline:
     def __init__(self) -> None:
@@ -143,11 +148,13 @@ class Pipeline:
 
     def download(self):
         for _, repo in self._repos.items():
-            self._clone(repo=repo)
+            self._clone_git_repository(repo=repo)
+            self._download_zip(repo=repo)
 
     def build(self):
         for name, repo in self._repos.items():
-            os.chdir(os.path.join(self._download_path, name))
+            repo_path = os.path.join(self._download_path, name)
+            os.chdir(repo_path)
             cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{0}/shared/pkgconfig:{1} && mkdir -p build && cd build && cmake .. {2}".format(
                 self._install_path, self._pkg_config_path, repo.get_options())
             self._command(cmd=cmd)
@@ -158,10 +165,12 @@ class Pipeline:
     def exit(self):
         self._after_script()
 
-    def _clone(self, repo: Repository):
+    def _clone_git_repository(self, repo: Repository):
         cmd = ""
         download_path = os.path.join(self._download_path, repo.get_name())
         if os.path.exists(download_path):
+            return
+        if not repo.is_git_repository():
             return
         self._command("mkdir -p {}".format(download_path))
         if "" == repo.get_branch():
@@ -174,6 +183,20 @@ class Pipeline:
                 repo.get_addr(),
                 download_path)
         self._command(cmd=cmd)
+
+    def _download_zip(self, repo: Repository):
+        cmd = ""
+        download_path = os.path.join(self._download_path, repo.get_name())
+        if os.path.exists(download_path) or not repo.get_addr():
+            return
+        if repo.is_git_repository():
+            return
+
+        # download
+        cmd = "wget -P {} {}".format(self._download_path, repo.get_addr())
+        self._command(cmd=cmd)
+
+        # unpack
 
     def _command(self, cmd):
         if "" != cmd:
@@ -206,7 +229,7 @@ class Pipeline:
             data = json.load(file, object_pairs_hook=OrderedDict)
         for name, repo in data["dependencies"].items():
             self._append_repository(
-                addr=repo.get("addr"),
+                addr=self._parse_addr(repo.get("addr")),
                 branch=repo.get("commit", ""),
                 before_script=repo.get("before_script", ""),
                 options=repo.get("cmake_optione", "")
@@ -242,6 +265,15 @@ class Pipeline:
                 print("Exception")
                 exit(0)
         self._repos[repo.get_name()] = repo
+
+    def _parse_addr(self, addr) -> str:
+        if isinstance(addr, str):
+            return addr
+        elif isinstance(addr, dict):
+            return ""
+        else:
+            print("packages.json addr Exception")
+            sys.exit(9)
 
 
 def main():
