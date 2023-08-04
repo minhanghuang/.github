@@ -9,12 +9,10 @@
   },
   "dependencies": {
     "setup": {
-      "addr": "https://github.com/minhanghuang/setup.git",
+      "addr": "https://github.com/minhanghuang/setup/archive/refs/heads/main.zip",
       "commit": "",
-      "before_script": "",
-      "cmake_optione": [
-        "-DCMAKE_INSTALL_PREFIX={install_path}"
-      ]
+      "install_path": "install",
+      "before_script": ""
     },
     "tinyxml2": {
       "addr": "https://github.com/leethomason/tinyxml2.git",

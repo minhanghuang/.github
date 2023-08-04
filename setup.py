@@ -4,7 +4,7 @@ import json
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.0.0"
+__SETUP_VERSION__ = "1.1.0"
 
 
 class Template:
@@ -108,6 +108,9 @@ class Repository:
     def get_options(self):
         return self._options
 
+    def get_install_path(self):
+        return self._install_path
+
     def set_addr(self, addr):
         self._addr = addr
 
@@ -124,9 +127,10 @@ class Repository:
         self._options = options
 
     def is_git_repository(self) -> bool:
-        if ".git" in self._addr:
-            return True
-        return False
+        return self._addr.endswith(".git")
+
+    def set_install_path(self, install_path):
+        self._install_path = install_path
 
 
 class Pipeline:
@@ -135,7 +139,7 @@ class Pipeline:
         self._repos = OrderedDict()
         self._scripts = Script()
         self._template = Template()
-        self._current_path = os.path.abspath(__file__)
+        self._current_path = os.path.abspath(os.path.dirname(__file__))
         self._download_path = ""
         self._install_path = ""
         self._packages_path = ""
@@ -149,10 +153,12 @@ class Pipeline:
     def download(self):
         for _, repo in self._repos.items():
             self._clone_git_repository(repo=repo)
-            self._download_zip(repo=repo)
+            self._download_compress_files(repo=repo)
 
     def build(self):
         for name, repo in self._repos.items():
+            if not repo.is_git_repository():
+                continue
             repo_path = os.path.join(self._download_path, name)
             os.chdir(repo_path)
             cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{0}/shared/pkgconfig:{1} && mkdir -p build && cd build && cmake .. {2}".format(
@@ -184,7 +190,7 @@ class Pipeline:
                 download_path)
         self._command(cmd=cmd)
 
-    def _download_zip(self, repo: Repository):
+    def _download_compress_files(self, repo: Repository):
         cmd = ""
         download_path = os.path.join(self._download_path, repo.get_name())
         if os.path.exists(download_path) or not repo.get_addr():
@@ -192,11 +198,48 @@ class Pipeline:
         if repo.is_git_repository():
             return
 
+        print("#### download compress file: {}".format(repo.get_addr()))
+        # remove packages file
+        for file_name in os.listdir(self._download_path):
+            file_path = os.path.join(self._download_path, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
         # download
         cmd = "wget -P {} {}".format(self._download_path, repo.get_addr())
         self._command(cmd=cmd)
 
         # unpack
+        temp_path = os.path.join(self._download_path, ".zip_temp")
+        for file_name in os.listdir(self._download_path):
+            file_path = os.path.join(self._download_path, file_name)
+            if os.path.isfile(file_path):
+                cmd = ""
+                if file_name.endswith(".zip"):
+                    cmd = "unzip -d {} {}".format(
+                        temp_path, file_path)
+                elif file_name.endswith(".tar.gz"):
+                    cmd = "tar -C {} -zxvf {}".format(
+                        self._download_path, file_path)
+                elif file_name.endswith(".tar"):
+                    cmd = "tar -C {} -xvf {}".format(
+                        self._download_path, file_path)
+                self._command(cmd=cmd)
+                break
+
+        # move
+        for file_name in os.listdir(temp_path):
+            file_path = os.path.join(temp_path, file_name)
+            if os.path.isdir(file_path) and repo.get_install_path():
+                # 修改文件夹名
+                cmd = "mv {} {}".format(
+                    file_path, os.path.join(temp_path, repo.get_name()))
+                self._command(cmd=cmd)
+                # 移动
+                cmd = "mv {} {}".format(os.path.join(temp_path, repo.get_name()), os.path.join(
+                    self._current_path, repo.get_install_path()))
+                self._command(cmd=cmd)
+                break
 
     def _command(self, cmd):
         if "" != cmd:
@@ -206,11 +249,10 @@ class Pipeline:
     def _load_params(self):
         self._parser.start()
         self._download_path = os.path.join(
-            os.path.dirname(self._current_path), str(self._parser.get_install_folder()))
+            self._current_path, str(self._parser.get_install_folder()))
         self._install_path = os.path.join(
-            os.path.dirname(self._current_path), str(self._parser.get_build_folder()))
-        self._packages_path = os.path.join(
-            os.path.dirname(self._current_path), "packages.json")
+            self._current_path, str(self._parser.get_build_folder()))
+        self._packages_path = os.path.join(self._current_path, "packages.json")
         if not os.path.exists(self._packages_path):
             print("packages.json文件不存在: {}".format(self._packages_path))
             sys.exit(9)
@@ -229,9 +271,11 @@ class Pipeline:
             data = json.load(file, object_pairs_hook=OrderedDict)
         for name, repo in data["dependencies"].items():
             self._append_repository(
+                name=name,
                 addr=self._parse_addr(repo.get("addr")),
                 branch=repo.get("commit", ""),
                 before_script=repo.get("before_script", ""),
+                install_path=repo.get("install_path", ""),
                 options=repo.get("cmake_optione", "")
             )
         self._scripts.set_before(data["scripts"].get("before", []))
@@ -250,7 +294,10 @@ class Pipeline:
         for key, value in kwargs.items():
             if "addr" == key:
                 repo.set_addr(addr=value)
-                repo.set_name(name=value.rsplit(".", 1)[0].rsplit("/", 1)[-1])
+            elif "name" == key:
+                repo.set_name(name=value)
+            elif "install_path" == key:
+                repo.set_install_path(install_path=value)
             elif "branch" == key:
                 repo.set_branch(branch=value)
             elif "before_script" == key:
