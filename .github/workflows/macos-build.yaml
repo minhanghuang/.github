@@ -6,13 +6,8 @@ on:
   push:
     # 当下面文件发生变化时, 触发CI
     paths:
-      - 'cmake/**'
-      - 'include/**/*.h'
-      - 'src/**/*.cc'
-      - 'tests/**'
-      - 'CMakeLists.txt'
-      - 'scripts/**'
       - 'setup.py'
+      - 'packages.json'
       - '.github/workflows/macos-build.yaml'
 
   pull_request:

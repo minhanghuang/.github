@@ -211,6 +211,7 @@ class Pipeline:
 
         # unpack
         temp_path = os.path.join(self._download_path, ".zip_temp")
+        os.makedirs(temp_path)
         for file_name in os.listdir(self._download_path):
             file_path = os.path.join(self._download_path, file_name)
             if os.path.isfile(file_path):

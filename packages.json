@@ -14,6 +14,14 @@
       "install_path": "install",
       "before_script": ""
     },
+    "setup.git": {
+      "addr": "https://github.com/minhanghuang/setup.git",
+      "commit": "",
+      "before_script": "",
+      "cmake_optione": [
+        "-DCMAKE_INSTALL_PREFIX={install_path}"
+      ]
+    },
     "tinyxml2": {
       "addr": "https://github.com/leethomason/tinyxml2.git",
       "cmake_optione": [

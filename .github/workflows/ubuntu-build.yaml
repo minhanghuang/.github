@@ -6,9 +6,8 @@ on:
   push:
     # 当下面文件发生变化时, 触发CI
     paths:
-      - 'include/**/*.h'
-      - 'src/**/*.cc'
-      - 'CMakeLists.txt'
+      - 'setup.py'
+      - 'packages.json'
       - '.github/workflows/ubuntu-build.yaml'
 
   pull_request:
