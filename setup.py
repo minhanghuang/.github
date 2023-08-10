@@ -1,10 +1,11 @@
 import sys
 import argparse
 import json
+import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.1.0"
+__SETUP_VERSION__ = "1.2.1"
 
 
 class Template:
@@ -89,6 +90,7 @@ class Repository:
         self._addr = ""
         self._name = ""
         self._branch = ""
+        self._commit = ""
         self._before_script = ""
         self._options = ""
         self._install_path = ""
@@ -101,6 +103,9 @@ class Repository:
 
     def get_branch(self):
         return self._branch
+
+    def get_commit(self):
+        return self._commit
 
     def get_before_script(self):
         return self._before_script
@@ -119,6 +124,9 @@ class Repository:
 
     def set_branch(self, branch):
         self._branch = branch
+
+    def set_commit(self, commit):
+        self._commit = commit
 
     def set_before_script(self, before_script):
         self._before_script = before_script
@@ -144,6 +152,7 @@ class Pipeline:
         self._install_path = ""
         self._packages_path = ""
         self._pkg_config_path = ""
+        self._system = platform.uname().system
 
     def init(self):
         self._load_params()
@@ -152,6 +161,9 @@ class Pipeline:
 
     def download(self):
         for _, repo in self._repos.items():
+            print("#################             ####################")
+            print("#################   download: {}".format(repo.get_name()))
+            print("#################             ####################")
             self._clone_git_repository(repo=repo)
             self._download_compress_files(repo=repo)
 
@@ -159,6 +171,9 @@ class Pipeline:
         for name, repo in self._repos.items():
             if not repo.is_git_repository():
                 continue
+            print("#################             ####################")
+            print("#################   build: {}".format(repo.get_name()))
+            print("#################             ####################")
             repo_path = os.path.join(self._download_path, name)
             os.chdir(repo_path)
             cmd = "export PKG_CONFIG_PATH={0}/lib/pkgconfig:{0}/shared/pkgconfig:{1} && mkdir -p build && cd build && cmake .. {2}".format(
@@ -179,15 +194,18 @@ class Pipeline:
         if not repo.is_git_repository():
             return
         self._command("mkdir -p {}".format(download_path))
-        if "" == repo.get_branch():
+        if "" == repo.get_branch() and "" == repo.get_commit():
             cmd = "git clone --depth 1 {} {}".format(
                 repo.get_addr(),
                 download_path)
-        else:
+        elif repo.get_branch():
             cmd = "git clone --depth 1 --single-branch --branch {} {} {}".format(
                 repo.get_branch(),
                 repo.get_addr(),
                 download_path)
+        elif repo.get_commit():
+            cmd = "git clone {0} {1} && cd {1} && git checkout {2}".format(
+                repo.get_addr(), download_path, repo.get_commit())
         self._command(cmd=cmd)
 
     def _download_compress_files(self, repo: Repository):
@@ -199,11 +217,8 @@ class Pipeline:
             return
 
         print("#### download compress file: {}".format(repo.get_addr()))
-        # remove packages file
-        for file_name in os.listdir(self._download_path):
-            file_path = os.path.join(self._download_path, file_name)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
+
+        self._remove_files(self._download_path)
 
         # download
         cmd = "wget -P {} {}".format(self._download_path, repo.get_addr())
@@ -211,7 +226,7 @@ class Pipeline:
 
         # unpack
         temp_path = os.path.join(self._download_path, ".zip_temp")
-        os.makedirs(temp_path)
+        self._command("mkdir -p {}".format(temp_path))
         for file_name in os.listdir(self._download_path):
             file_path = os.path.join(self._download_path, file_name)
             if os.path.isfile(file_path):
@@ -221,10 +236,10 @@ class Pipeline:
                         temp_path, file_path)
                 elif file_name.endswith(".tar.gz"):
                     cmd = "tar -C {} -zxvf {}".format(
-                        self._download_path, file_path)
+                        temp_path, file_path)
                 elif file_name.endswith(".tar"):
                     cmd = "tar -C {} -xvf {}".format(
-                        self._download_path, file_path)
+                        temp_path, file_path)
                 self._command(cmd=cmd)
                 break
 
@@ -242,10 +257,18 @@ class Pipeline:
                 self._command(cmd=cmd)
                 break
 
+        self._remove_files(self._download_path)
+
     def _command(self, cmd):
         if "" != cmd:
             print("cmd: {}".format(cmd))
             os.system(cmd)
+
+    def _remove_files(self, path: str):
+        for file_name in os.listdir(path):
+            file_path = os.path.join(path, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     def _load_params(self):
         self._parser.start()
@@ -274,7 +297,8 @@ class Pipeline:
             self._append_repository(
                 name=name,
                 addr=self._parse_addr(repo.get("addr")),
-                branch=repo.get("commit", ""),
+                branch=repo.get("branch", ""),
+                commit=repo.get("commit", ""),
                 before_script=repo.get("before_script", ""),
                 install_path=repo.get("install_path", ""),
                 options=repo.get("cmake_optione", "")
@@ -301,6 +325,8 @@ class Pipeline:
                 repo.set_install_path(install_path=value)
             elif "branch" == key:
                 repo.set_branch(branch=value)
+            elif "commit" == key:
+                repo.set_commit(commit=value)
             elif "before_script" == key:
                 repo.set_before_script(before_script=value)
             elif "options" == key:
@@ -318,10 +344,15 @@ class Pipeline:
         if isinstance(addr, str):
             return addr
         elif isinstance(addr, dict):
-            return ""
-        else:
-            print("packages.json addr Exception")
-            sys.exit(9)
+            print("addr is dict: {}".format(addr))
+            if "Linux" == self._system and "linux" in addr:
+                print("addr: {}".format(addr["linux"]))
+                return addr["linux"]
+            elif "Darwin" == self._system and "mac" in addr:
+                print("addr: {}".format(addr["mac"]))
+                return addr["mac"]
+        print("packages.json addr Exception")
+        sys.exit(9)
 
 
 def main():
