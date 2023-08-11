@@ -8,10 +8,10 @@
     ]
   },
   "dependencies": {
-    "setup": {
+    "setup.1": {
       "addr": "https://github.com/minhanghuang/setup/archive/refs/heads/main.zip",
       "commit": "",
-      "install_path": "install",
+      "install_path": "install1",
       "before_script": ""
     },
     "setup.2": {
@@ -20,7 +20,7 @@
         "linux": "https://github.com/minhanghuang/setup/archive/refs/heads/main.zip"
       },
       "commit": "",
-      "install_path": "install",
+      "install_path": "install2",
       "before_script": ""
     },
     "setup.git": {

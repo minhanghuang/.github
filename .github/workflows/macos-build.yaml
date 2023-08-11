@@ -34,4 +34,4 @@ jobs:
 
       - name: Test
         run: |
-          bash -c "cd ${{ github.workspace }} && source install/setup.bash"
+          bash -c "cd ${{ github.workspace }} && source install/setup.bash && source install1/setup.1/env/setup.bash && source install2/setup.2/env/setup.bash"

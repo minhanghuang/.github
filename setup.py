@@ -5,7 +5,7 @@ import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.2.1"
+__SETUP_VERSION__ = "1.2.2"
 
 
 class Template:
@@ -252,6 +252,9 @@ class Pipeline:
                     file_path, os.path.join(temp_path, repo.get_name()))
                 self._command(cmd=cmd)
                 # 移动
+                cmd = "mkdir -p {}".format(os.path.join(
+                    self._current_path, repo.get_install_path()))
+                self._command(cmd=cmd)
                 cmd = "mv {} {}".format(os.path.join(temp_path, repo.get_name()), os.path.join(
                     self._current_path, repo.get_install_path()))
                 self._command(cmd=cmd)
@@ -261,7 +264,7 @@ class Pipeline:
 
     def _command(self, cmd):
         if "" != cmd:
-            print("cmd: {}".format(cmd))
+            print("---   @@@@@@@ cmd: {}".format(cmd))
             os.system(cmd)
 
     def _remove_files(self, path: str):

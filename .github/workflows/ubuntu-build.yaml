@@ -42,7 +42,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt update
-          apt install -y pkg-config python3-dev git cmake g++
+          apt install -y pkg-config wget unzip python3-dev git cmake g++
 
       # 编译
       - name: Build
@@ -51,7 +51,7 @@ jobs:
 
       - name: Test
         run: |
-          bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash"
+          bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash && source install1/setup.1/env/setup.bash && source install2/setup.2/env/setup.bash"
 
   build-arm-ubuntu:
     runs-on: ubuntu-latest
