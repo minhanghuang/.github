@@ -1,7 +1,8 @@
 {
   "scripts": {
     "before": [
-      "ls {install_path}"
+      "ls {install_path}",
+      "ls {home_path}"
     ],
     "after": [
       "ls -a"

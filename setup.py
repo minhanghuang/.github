@@ -5,11 +5,12 @@ import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.2.2"
+__SETUP_VERSION__ = "1.2.3"
 
 
 class Template:
     def __init__(self) -> None:
+        self._home_path = os.path.expanduser("~")
         self._current_path = os.path.abspath(os.path.dirname(__file__))
         self._download_path = ""
         self._install_path = ""
@@ -22,6 +23,7 @@ class Template:
 
     def get_template(self):
         return {
+            "home_path": self._home_path,
             "current_path": self._current_path,
             "download_path": self._download_path,
             "install_path": self._install_path
