@@ -5,7 +5,7 @@ import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.2.3"
+__SETUP_VERSION__ = "1.2.4"
 
 
 class Template:
@@ -211,39 +211,38 @@ class Pipeline:
         self._command(cmd=cmd)
 
     def _download_compress_files(self, repo: Repository):
-        cmd = ""
-        download_path = os.path.join(self._download_path, repo.get_name())
-        if os.path.exists(download_path) or not repo.get_addr():
+        if not repo.get_addr():
             return
         if repo.is_git_repository():
+            return
+        cmd = ""
+        download_path = os.path.join(self._download_path, repo.get_name())
+        file_extension = os.path.splitext(repo.get_addr())[1]
+        target_file_name = "{}{}".format(repo.get_name(), file_extension)
+        target_file_path = os.path.join(self._download_path, target_file_name)
+        if os.path.exists(target_file_path):
+            print("  文件 {} 已存在".format(target_file_path))
             return
 
         print("#### download compress file: {}".format(repo.get_addr()))
 
-        self._remove_files(self._download_path)
-
         # download
-        cmd = "wget -P {} {}".format(self._download_path, repo.get_addr())
+        cmd = "wget -O {0} {1}".format(target_file_path, repo.get_addr())
         self._command(cmd=cmd)
 
         # unpack
         temp_path = os.path.join(self._download_path, ".zip_temp")
         self._command("mkdir -p {}".format(temp_path))
-        for file_name in os.listdir(self._download_path):
-            file_path = os.path.join(self._download_path, file_name)
-            if os.path.isfile(file_path):
-                cmd = ""
-                if file_name.endswith(".zip"):
-                    cmd = "unzip -d {} {}".format(
-                        temp_path, file_path)
-                elif file_name.endswith(".tar.gz"):
-                    cmd = "tar -C {} -zxvf {}".format(
-                        temp_path, file_path)
-                elif file_name.endswith(".tar"):
-                    cmd = "tar -C {} -xvf {}".format(
-                        temp_path, file_path)
-                self._command(cmd=cmd)
-                break
+        if target_file_path.endswith(".zip"):
+            cmd = "unzip -d {} {}".format(temp_path, target_file_path)
+        elif target_file_path.endswith(".tar.gz"):
+            cmd = "tar -C {} -zxvf {}".format(temp_path, target_file_path)
+        elif target_file_path.endswith(".tar"):
+            cmd = "tar -C {} -xvf {}".format(temp_path, target_file_path)
+        else:
+            print("   !!!!!!  Exception")
+            sys.exit(9)
+        self._command(cmd=cmd)
 
         # move
         for file_name in os.listdir(temp_path):
@@ -262,7 +261,7 @@ class Pipeline:
                 self._command(cmd=cmd)
                 break
 
-        self._remove_files(self._download_path)
+        self._remove_files(temp_path)
 
     def _command(self, cmd):
         if "" != cmd:
