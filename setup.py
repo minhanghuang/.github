@@ -5,7 +5,7 @@ import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.2.4"
+__SETUP_VERSION__ = "1.2.5"
 
 
 class Template:
@@ -89,6 +89,7 @@ class Script:
 
 class Repository:
     def __init__(self) -> None:
+        self._current_path = os.path.abspath(os.path.dirname(__file__))
         self._addr = ""
         self._name = ""
         self._branch = ""
@@ -118,29 +119,41 @@ class Repository:
     def get_install_path(self):
         return self._install_path
 
-    def set_addr(self, addr):
+    def set_addr(self, addr) -> None:
         self._addr = addr
+        return None
 
-    def set_name(self, name):
+    def set_name(self, name) -> None:
         self._name = name
+        return None
 
-    def set_branch(self, branch):
+    def set_branch(self, branch) -> None:
         self._branch = branch
+        return None
 
-    def set_commit(self, commit):
+    def set_commit(self, commit) -> None:
         self._commit = commit
+        return None
 
-    def set_before_script(self, before_script):
+    def set_before_script(self, before_script) -> None:
         self._before_script = before_script
+        return None
 
-    def set_options(self, options):
+    def set_options(self, options) -> None:
         self._options = options
+        return None
 
     def is_git_repository(self) -> bool:
         return self._addr.endswith(".git")
 
-    def set_install_path(self, install_path):
-        self._install_path = install_path
+    def set_install_path(self, install_path) -> None:
+        if install_path.startswith("/"):
+            self._install_path = install_path
+        elif install_path.startswith("~"):
+            self._install_path = os.path.expanduser(install_path)
+        else:
+            self._install_path = os.path.join(self._current_path, install_path)
+        return None
 
 
 class Pipeline:
@@ -160,6 +173,7 @@ class Pipeline:
         self._load_params()
         self._loading_packages()
         self._before_script()
+        return None
 
     def download(self):
         for _, repo in self._repos.items():
@@ -297,15 +311,15 @@ class Pipeline:
     def _loading_packages(self):
         with open(self._packages_path) as file:
             data = json.load(file, object_pairs_hook=OrderedDict)
-        for name, repo in data["dependencies"].items():
+        for config_name, config_repo in data["dependencies"].items():
             self._append_repository(
-                name=name,
-                addr=self._parse_addr(repo.get("addr")),
-                branch=repo.get("branch", ""),
-                commit=repo.get("commit", ""),
-                before_script=repo.get("before_script", ""),
-                install_path=repo.get("install_path", ""),
-                options=repo.get("cmake_optione", "")
+                name=config_name,
+                addr=self._parse_addr(config_repo.get("addr")),
+                branch=config_repo.get("branch", ""),
+                commit=config_repo.get("commit", ""),
+                before_script=config_repo.get("before_script", ""),
+                install_path=config_repo.get("install_path", ""),
+                options=config_repo.get("cmake_optione", "")
             )
         self._scripts.set_before(data["scripts"].get("before", []))
         self._scripts.set_after(data["scripts"].get("after", []))
@@ -322,17 +336,23 @@ class Pipeline:
         repo = Repository()
         for key, value in kwargs.items():
             if "addr" == key:
-                repo.set_addr(addr=value)
+                repo.set_addr(addr=value.format(
+                    **self._template.get_template()))
             elif "name" == key:
-                repo.set_name(name=value)
+                repo.set_name(name=value.format(
+                    **self._template.get_template()))
             elif "install_path" == key:
-                repo.set_install_path(install_path=value)
+                repo.set_install_path(install_path=value.format(
+                    **self._template.get_template()))
             elif "branch" == key:
-                repo.set_branch(branch=value)
+                repo.set_branch(branch=value.format(
+                    **self._template.get_template()))
             elif "commit" == key:
-                repo.set_commit(commit=value)
+                repo.set_commit(commit=value.format(
+                    **self._template.get_template()))
             elif "before_script" == key:
-                repo.set_before_script(before_script=value)
+                repo.set_before_script(before_script=value.format(
+                    **self._template.get_template()))
             elif "options" == key:
                 options = ""
                 for option in value:
