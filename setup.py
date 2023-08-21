@@ -5,7 +5,7 @@ import platform
 import os
 from collections import OrderedDict
 
-__SETUP_VERSION__ = "1.2.5"
+__SETUP_VERSION__ = "1.2.6"
 
 
 class Template:
@@ -247,7 +247,7 @@ class Pipeline:
         # unpack
         temp_path = os.path.join(self._download_path, ".zip_temp")
         self._command("mkdir -p {}".format(temp_path))
-        if target_file_path.endswith(".zip"):
+        if target_file_path.endswith(".zip") or target_file_path.endswith(".vsix"):
             cmd = "unzip -d {} {}".format(temp_path, target_file_path)
         elif target_file_path.endswith(".tar.gz"):
             cmd = "tar -C {} -zxvf {}".format(temp_path, target_file_path)
