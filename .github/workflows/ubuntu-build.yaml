@@ -14,6 +14,7 @@ on:
     # 当下面分支PR时, 触发CI
     branches:
       - main
+    types: [opened, synchronize, reopened, closed]
 
 jobs:
   build-amd-ubuntu:
@@ -22,6 +23,8 @@ jobs:
       matrix:
         os: ["16.04", "18.04", "20.04", "22.04"]
 
+    # 非关闭PR触发
+    if: github.event.action != 'closed'
     # github actions docker image
     runs-on: ubuntu-latest
     # docker in docker 因为Github提供的镜像不满足需求, 所以需要拉取dockerhub上的镜像
@@ -54,7 +57,8 @@ jobs:
           bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash && source install1/setup.1/env/setup.bash && source install2/setup.2/env/setup.bash"
 
   build-arm-ubuntu:
-    if: github.event.pull_request.merged == true
+    # 关闭PR时才触发
+    if: github.event.action == 'closed'
     runs-on: ubuntu-latest
 
     strategy:
