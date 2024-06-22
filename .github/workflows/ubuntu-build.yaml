@@ -14,7 +14,7 @@ on:
     # 当下面分支PR时, 触发CI
     branches:
       - main
-  
+
 jobs:
   build-amd-ubuntu:
     # 并行
@@ -54,6 +54,7 @@ jobs:
           bash -c "cd /workspace/${{ github.repository }} && source install/setup.bash && source install1/setup.1/env/setup.bash && source install2/setup.2/env/setup.bash"
 
   build-arm-ubuntu:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     strategy:
