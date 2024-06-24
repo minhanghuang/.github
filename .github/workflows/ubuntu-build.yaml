@@ -16,6 +16,13 @@ on:
       - main
     types: [opened, synchronize, reopened, closed]
 
+  # # 用于在一个工作流完成后触发另一个工作流
+  # # 例如一个deploy job需要等待build job结束后才会触发
+  # workflow_run:
+  #   workflows: ["CI"] # job name
+  #   types:
+  #     - completed
+
 jobs:
   build-amd-ubuntu:
     # 并行
@@ -68,6 +75,8 @@ jobs:
             distro: ubuntu18.04
           - arch: aarch64
             distro: ubuntu20.04
+          - arch: aarch64
+            distro: ubuntu_latest # ubuntu 24.04
 
     steps:
       - uses: actions/checkout@v3
