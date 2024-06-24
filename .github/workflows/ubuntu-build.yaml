@@ -30,8 +30,8 @@ jobs:
       matrix:
         os: ["16.04", "18.04", "20.04", "22.04"]
 
-    # 非关闭PR触发
-    if: github.event.action != 'closed'
+    # # 非关闭PR触发
+    # if: github.event.action != 'closed'
     # github actions docker image
     runs-on: ubuntu-latest
     # docker in docker 因为Github提供的镜像不满足需求, 所以需要拉取dockerhub上的镜像
