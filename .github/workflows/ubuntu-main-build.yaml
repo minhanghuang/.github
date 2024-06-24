@@ -1,0 +1,23 @@
+name: ubuntu build
+run-name: on ubuntu PR closed
+
+### 触发条件:
+#    1. 当有代码推送到main分支时
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-amd-ubuntu:
+    strategy:
+      matrix:
+        os: ["22.04"]
+
+    runs-on: ubuntu-latest
+    container:
+      image: docker://ubuntu:${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
