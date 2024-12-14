@@ -38,8 +38,8 @@ jobs:
     container:
       # dockerhub镜像
       image: docker://ubuntu:${{ matrix.os }}
-      # 挂载
-      options: --volume ${{ github.workspace }}:/workspace/${{ github.repository }}
+      # # 挂载
+      # options: --volume ${{ github.workspace }}:/workspace/${{ github.repository }}
 
     steps:
       - name: Check out repository code
@@ -59,11 +59,11 @@ jobs:
       # 编译
       - name: Build
         run: |
-          bash -c "cd /workspace/${{ github.repository }}"
+          bash -c "python3 setup.py && source install/setup.bash"
 
       - name: Test
         run: |
-          bash -c "cd /workspace/${{ github.repository }}"
+          bash -c "source install/setup.bash && source install1/setup.1/env/setup.bash && source install2/setup.2/env/setup.bash"
 
   build-arm-ubuntu:
     # 关闭PR时才触发
