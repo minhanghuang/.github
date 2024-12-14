@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v1 # https://github.com/actions/checkout/issues/1590
 
       # 安装依赖
       - name: Install
@@ -79,7 +79,8 @@ jobs:
             distro: ubuntu_latest # ubuntu 24.04
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out repository code
+        uses: actions/checkout@v1 # https://github.com/actions/checkout/issues/1590
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
