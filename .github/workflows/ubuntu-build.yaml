@@ -9,6 +9,7 @@ on:
       - 'setup.py'
       - 'packages.json'
       - '.github/workflows/ubuntu-build.yaml'
+      - ".github/workflows/dependence.yaml"
 
   pull_request:
     # 当下面分支PR时, 触发CI

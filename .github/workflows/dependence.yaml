@@ -1,0 +1,39 @@
+name: ubuntu build dependence
+run-name: build runner on ubuntu dependence🚀
+
+on:
+  workflow_run:
+    workflows: ["build-amd-ubuntu"]  # 指定依赖的工作流名称
+    types:
+      - completed
+
+  push:
+    # 当下面文件发生变化时, 触发CI
+    paths:
+      - "setup.py"
+      - "packages.json"
+      - ".github/workflows/dependence.yaml"
+
+  pull_request:
+    branches:
+      # 当下面分支PR时, 触发CI
+      - main
+
+jobs:
+  build-amd-ubuntu-dependece:
+    strategy:
+      matrix:
+        os: ["22.04"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: |
+          bash -c "cd ${{ github.workspace }}"
+
+      - name: Test
+        run: |
+          bash -c "cd ${{ github.workspace }}"
