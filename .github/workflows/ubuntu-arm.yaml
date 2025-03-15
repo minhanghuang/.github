@@ -1,0 +1,63 @@
+name: ubuntu arm build
+run-name: build runner on arm ubuntu 🚀
+
+on:
+  push:
+    paths:
+      - ".github/workflows/ubuntu-arm.yaml"
+
+# 原生ARM
+jobs:
+  build-arm-ubuntu:
+    strategy:
+      matrix:
+        os: ["ubuntu-22.04-arm", "ubuntu-24.04-arm"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Install
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt update
+          sudo apt install -y lsb-release
+
+      - name: Echo
+        run: |
+          echo "-----------------------"
+          uname -a
+          lsb_release -a
+          echo "-----------------------"
+
+  build-arm-ubuntu-2:
+    strategy:
+      matrix:
+        os: ["18.04", "20.04", "22.04", "24.04"]
+
+    runs-on: ubuntu-24.04-arm
+    container:
+      # dockerhub镜像
+      image: docker://ubuntu:${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Install
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt update
+          apt install -y lsb-release
+
+      - name: Echo
+        run: |
+          echo "-----------------------"
+          uname -a
+          lsb_release -a
+          echo "-----------------------"
